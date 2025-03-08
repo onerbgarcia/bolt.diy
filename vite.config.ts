@@ -13,6 +13,22 @@ dotenv.config();
 
 // Get detailed git info with fallbacks
 const getGitInfo = () => {
+  // Verificar se estamos em um ambiente de build do Cloudflare Pages
+  const isCloudflarePages = process.env.CF_PAGES === 'true';
+  
+  // Se estamos em ambiente de build do Cloudflare, retornar valores padrão
+  if (isCloudflarePages) {
+    return {
+      commitHash: 'cloudflare-build',
+      branch: 'main',
+      commitTime: new Date().toISOString(),
+      author: 'cloudflare-build',
+      email: 'cloudflare-build',
+      remoteUrl: 'https://github.com/stackblitz-labs/bolt.diy',
+      repoName: 'stackblitz-labs/bolt.diy',
+    };
+  }
+
   try {
     return {
       commitHash: execSync('git rev-parse --short HEAD').toString().trim(),
@@ -27,11 +43,12 @@ const getGitInfo = () => {
         .replace(/^.*github.com[:/]/, '')
         .replace(/\.git$/, ''),
     };
-  } catch {
+  } catch (error) {
+    console.warn('Failed to get git info:', error);
     return {
       commitHash: 'no-git-info',
       branch: 'unknown',
-      commitTime: 'unknown',
+      commitTime: new Date().toISOString(),
       author: 'unknown',
       email: 'unknown',
       remoteUrl: 'unknown',
@@ -95,7 +112,7 @@ export default defineConfig((config) => {
     },
     plugins: [
       nodePolyfills({
-        include: ['path', 'buffer', 'process'],
+        include: ['path', 'buffer', 'process', 'child_process', 'crypto', 'util', 'stream'],
       }),
       config.mode !== 'test' && remixCloudflareDevProxy(),
       remixVitePlugin({
